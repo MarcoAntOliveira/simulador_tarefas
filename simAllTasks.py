@@ -19,15 +19,15 @@ except Exception as e:
 
 # === FIGURA ===
 fig, ax = plt.subplots(figsize=(10, 6))
-ax.set_ylim(0, 10)
-ax.set_xlabel("Tempo")
-ax.set_ylabel("Tarefas (nível)")
+ax.set_xlabel("Tempo (s)")
+ax.set_ylabel("Tarefa")
 ax.grid(True)
 
-tarefas = []  # (ativacao, duracao, altura, nome)
+tarefas = []  # (ativacao, duracao, nome)
 inicio_tempo = time.time()
 
 cores_tarefas = {}
+ordem_tarefas = []
 paleta = ['blue', 'green', 'orange', 'red', 'purple', 'brown', 'cyan', 'magenta']
 
 def atualizar(frame):
@@ -38,30 +38,39 @@ def atualizar(frame):
         if linha:
             print(f"Recebido: {linha}")
             if linha.startswith("Tarefa:"):
-                dados = {k: v for k, v in [campo.split(":") for campo in linha.split(",")]}
+                campos = linha.split(",")
+                dados = {}
+                for campo in campos:
+                    chave, valor = campo.split(":")
+                    dados[chave.strip()] = valor.strip()
+
                 nome = dados["Tarefa"]
                 ativacao = float(dados["Ativacao"])
                 duracao = float(dados["Duracao"])
-                altura = int(dados["Altura"])
 
                 if nome not in cores_tarefas:
                     cores_tarefas[nome] = paleta[len(cores_tarefas) % len(paleta)]
+                    if nome not in ordem_tarefas:
+                        ordem_tarefas.append(nome)
 
-                tarefas.append((ativacao, duracao, altura, nome))
+                tarefas.append((ativacao, duracao, nome))
 
         # === ATUALIZA PLOT ===
         ax.clear()
-        ax.set_xlim(tempo_atual - TEMPO_JANELA, tempo_atual)
-        ax.set_ylim(0, 10)
-        ax.set_xlabel("Tempo")
-        ax.set_ylabel("Tarefas (nível)")
+        ax.set_xlim(max(0, tempo_atual - TEMPO_JANELA), tempo_atual)
+        ax.set_yticks(range(len(ordem_tarefas)))
+        ax.set_yticklabels(ordem_tarefas)
+        ax.set_ylim(-1, len(ordem_tarefas))
+        ax.set_xlabel("Tempo (s)")
+        ax.set_ylabel("Tarefa")
         ax.grid(True)
 
-        for ativ, dur, alt, nome in tarefas:
-            if ativ  >= tempo_atual - TEMPO_JANELA:
-                ax.broken_barh([(ativ, dur)], (0 , alt), facecolors=cores_tarefas[nome])
-                ax.text((ativ + dur)/2, alt/2, nome, ha='center', va='center', color='white', fontsize=8)
-        
+        for ativ, dur, nome in tarefas:
+            if ativ + dur >= tempo_atual - TEMPO_JANELA:
+                y_idx = ordem_tarefas.index(nome)
+                ax.broken_barh([(ativ, dur)], (y_idx - 0.4, 0.8), facecolors=cores_tarefas[nome])
+                ax.text(ativ + dur / 2, y_idx, nome, ha='center', va='center', color='white', fontsize=8)
+
     except Exception as e:
         print(f"⚠️ Erro: {e}")
 
